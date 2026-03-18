@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Options Trading Bot - B3</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: #0a0e17;
+            color: #e1e5ea;
+            min-height: 100vh;
+        }
+        .header {
+            background: linear-gradient(135deg, #1a1f2e 0%, #0d1117 100%);
+            border-bottom: 1px solid #30363d;
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header h1 {
+            font-size: 20px;
+            background: linear-gradient(90deg, #58a6ff, #3fb950);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .header .subtitle { color: #8b949e; font-size: 13px; }
+        .disclaimer {
+            background: #2d1b00;
+            border: 1px solid #d29922;
+            color: #e3b341;
+            padding: 8px 24px;
+            font-size: 12px;
+            text-align: center;
+        }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        .grid { display: grid; gap: 20px; }
+        .grid-2 { grid-template-columns: 1fr 1fr; }
+        .grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+        .card {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 20px;
+        }
+        .card h2 {
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #8b949e;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #21262d;
+        }
+        .ticker-selector {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+        }
+        .ticker-btn {
+            background: #21262d;
+            border: 1px solid #30363d;
+            color: #c9d1d9;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+        .ticker-btn:hover { background: #30363d; border-color: #58a6ff; }
+        .ticker-btn.active { background: #1f6feb; border-color: #58a6ff; color: white; }
+        .stat { margin-bottom: 12px; }
+        .stat-label { font-size: 12px; color: #8b949e; }
+        .stat-value { font-size: 24px; font-weight: 600; }
+        .stat-value.positive { color: #3fb950; }
+        .stat-value.negative { color: #f85149; }
+        .input-group {
+            margin-bottom: 12px;
+        }
+        .input-group label {
+            display: block;
+            font-size: 12px;
+            color: #8b949e;
+            margin-bottom: 4px;
+        }
+        .input-group input, .input-group select {
+            width: 100%;
+            background: #0d1117;
+            border: 1px solid #30363d;
+            color: #c9d1d9;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        .btn {
+            background: #238636;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+        .btn:hover { background: #2ea043; }
+        .btn-blue { background: #1f6feb; }
+        .btn-blue:hover { background: #388bfd; }
+        .btn-red { background: #da3633; }
+        .btn-red:hover { background: #f85149; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        th {
+            text-align: left;
+            padding: 8px;
+            border-bottom: 1px solid #30363d;
+            color: #8b949e;
+            font-weight: 500;
+        }
+        td {
+            padding: 8px;
+            border-bottom: 1px solid #21262d;
+        }
+        tr:hover { background: #1c2128; }
+        .tag {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        .tag-call { background: #0e4429; color: #3fb950; }
+        .tag-put { background: #3d1014; color: #f85149; }
+        .tag-buy { background: #0e4429; color: #3fb950; }
+        .tag-sell { background: #3d1014; color: #f85149; }
+        .signal-card {
+            background: #1c2128;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+        .signal-card .signal-type {
+            font-weight: 700;
+            font-size: 16px;
+            color: #58a6ff;
+        }
+        .signal-card .confidence {
+            float: right;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .confidence-high { color: #3fb950; }
+        .confidence-med { color: #d29922; }
+        .confidence-low { color: #f85149; }
+        .greeks-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+        .greek-item {
+            background: #1c2128;
+            padding: 12px;
+            border-radius: 6px;
+            text-align: center;
+        }
+        .greek-item .label { font-size: 11px; color: #8b949e; text-transform: uppercase; }
+        .greek-item .value { font-size: 20px; font-weight: 600; color: #58a6ff; }
+        .tabs { display: flex; gap: 0; margin-bottom: 20px; }
+        .tab {
+            padding: 10px 20px;
+            background: #21262d;
+            border: 1px solid #30363d;
+            color: #8b949e;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        .tab:first-child { border-radius: 6px 0 0 6px; }
+        .tab:last-child { border-radius: 0 6px 6px 0; }
+        .tab.active { background: #1f6feb; color: white; border-color: #58a6ff; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .portfolio-stat {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #21262d;
+        }
+        .warning { background: #2d1b00; border: 1px solid #d29922; padding: 8px 12px;
+                   border-radius: 6px; margin-bottom: 8px; font-size: 13px; color: #e3b341; }
+        .loading { text-align: center; padding: 40px; color: #8b949e; }
+        @media (max-width: 768px) {
+            .grid-2, .grid-3 { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div>
+            <h1>&#x1f4c8; Options Trading Bot - B3</h1>
+            <div class="subtitle">Análise e operações de opções no mercado brasileiro</div>
+        </div>
+        <div style="text-align: right;">
+            <div style="color: #3fb950; font-size: 13px;">SELIC: 13.75% a.a.</div>
+            <div style="color: #8b949e; font-size: 12px;" id="clock"></div>
+        </div>
+    </div>
+    <div class="disclaimer">
+        ⚠️ PAPER TRADING - Este bot é para fins educacionais. Não constitui recomendação de investimento.
+        Opções são instrumentos de alto risco. Consulte um profissional certificado.
+    </div>
+
+    <div class="container">
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('dashboard')">Dashboard</div>
+            <div class="tab" onclick="switchTab('chain')">Options Chain</div>
+            <div class="tab" onclick="switchTab('greeks')">Calculadora Greeks</div>
+            <div class="tab" onclick="switchTab('strategies')">Estratégias</div>
+            <div class="tab" onclick="switchTab('portfolio')">Portfólio</div>
+        </div>
+
+        <!-- DASHBOARD TAB -->
+        <div id="tab-dashboard" class="tab-content active">
+            <div class="card" style="margin-bottom: 20px;">
+                <h2>Selecionar Ativo</h2>
+                <div class="ticker-selector" id="ticker-selector">
+                    {% for ticker in tickers %}
+                    <button class="ticker-btn" onclick="selectTicker('{{ ticker }}')">{{ ticker }}</button>
+                    {% endfor %}
+                </div>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <input type="text" id="custom-ticker" placeholder="Ou digite o ticker..."
+                           style="background: #0d1117; border: 1px solid #30363d; color: #c9d1d9;
+                                  padding: 8px 12px; border-radius: 6px; width: 200px;">
+                    <button class="btn btn-blue" onclick="selectTicker(document.getElementById('custom-ticker').value)">
+                        Buscar
+                    </button>
+                </div>
+            </div>
+
+            <div class="grid grid-3" id="stock-info" style="margin-bottom: 20px;">
+                <div class="card">
+                    <div class="stat">
+                        <div class="stat-label">Preço Atual</div>
+                        <div class="stat-value" id="stock-price">-</div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="stat">
+                        <div class="stat-label">Variação 1D</div>
+                        <div class="stat-value" id="stock-change">-</div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="stat">
+                        <div class="stat-label">Volatilidade 30D</div>
+                        <div class="stat-value" id="stock-vol">-</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Sinais de Trading</h2>
+                <div id="signals-container">
+                    <div class="loading">Selecione um ativo para ver os sinais</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- OPTIONS CHAIN TAB -->
+        <div id="tab-chain" class="tab-content">
+            <div class="card">
+                <h2>Options Chain - <span id="chain-ticker">-</span></h2>
+                <div style="margin-bottom: 16px; display: flex; gap: 12px; align-items: center;">
+                    <select id="chain-expiration" onchange="filterChain()"
+                            style="background: #0d1117; border: 1px solid #30363d; color: #c9d1d9;
+                                   padding: 8px 12px; border-radius: 6px;">
+                        <option>Selecione vencimento...</option>
+                    </select>
+                    <label style="font-size: 13px;">
+                        <input type="checkbox" id="chain-itm-only" onchange="filterChain()"> Apenas ITM
+                    </label>
+                </div>
+                <div style="overflow-x: auto;">
+                    <table id="chain-table">
+                        <thead>
+                            <tr>
+                                <th>Ticker</th>
+                                <th>Tipo</th>
+                                <th>Strike</th>
+                                <th>Bid</th>
+                                <th>Ask</th>
+                                <th>Último</th>
+                                <th>IV%</th>
+                                <th>Volume</th>
+                                <th>OI</th>
+                                <th>Dias</th>
+                                <th>Ação</th>
+                            </tr>
+                        </thead>
+                        <tbody id="chain-body">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- GREEKS CALCULATOR TAB -->
+        <div id="tab-greeks" class="tab-content">
+            <div class="grid grid-2">
+                <div class="card">
+                    <h2>Parâmetros</h2>
+                    <div class="input-group">
+                        <label>Preço do Ativo (S)</label>
+                        <input type="number" id="greek-spot" value="30" step="0.01">
+                    </div>
+                    <div class="input-group">
+                        <label>Strike (K)</label>
+                        <input type="number" id="greek-strike" value="32" step="0.01">
+                    </div>
+                    <div class="input-group">
+                        <label>Dias até Vencimento</label>
+                        <input type="number" id="greek-days" value="30" step="1">
+                    </div>
+                    <div class="input-group">
+                        <label>Volatilidade (%)</label>
+                        <input type="number" id="greek-vol" value="35" step="0.1">
+                    </div>
+                    <div class="input-group">
+                        <label>Taxa SELIC (%)</label>
+                        <input type="number" id="greek-rate" value="13.75" step="0.01">
+                    </div>
+                    <div class="input-group">
+                        <label>Tipo</label>
+                        <select id="greek-type">
+                            <option value="call">Call</option>
+                            <option value="put">Put</option>
+                        </select>
+                    </div>
+                    <button class="btn" onclick="calculateGreeks()">Calcular Greeks</button>
+                </div>
+                <div class="card">
+                    <h2>Resultados</h2>
+                    <div class="greeks-grid" id="greeks-results">
+                        <div class="greek-item"><div class="label">Preço</div><div class="value" id="g-price">-</div></div>
+                        <div class="greek-item"><div class="label">Delta</div><div class="value" id="g-delta">-</div></div>
+                        <div class="greek-item"><div class="label">Gamma</div><div class="value" id="g-gamma">-</div></div>
+                        <div class="greek-item"><div class="label">Theta</div><div class="value" id="g-theta">-</div></div>
+                        <div class="greek-item"><div class="label">Vega</div><div class="value" id="g-vega">-</div></div>
+                        <div class="greek-item"><div class="label">Rho</div><div class="value" id="g-rho">-</div></div>
+                    </div>
+                    <div style="margin-top: 16px; padding: 12px; background: #1c2128; border-radius: 6px;">
+                        <div style="font-size: 12px; color: #8b949e;">IV Implícita</div>
+                        <div style="font-size: 18px; font-weight: 600;" id="g-iv">-</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- STRATEGIES TAB -->
+        <div id="tab-strategies" class="tab-content">
+            <div class="card" style="margin-bottom: 20px;">
+                <h2>Analisar Estratégia</h2>
+                <div class="grid grid-2">
+                    <div>
+                        <div class="input-group">
+                            <label>Estratégia</label>
+                            <select id="strat-type" onchange="updateStrategyForm()">
+                                <option value="covered_call">Venda Coberta (Covered Call)</option>
+                                <option value="protective_put">Put Protetiva (Protective Put)</option>
+                                <option value="bull_call_spread">Trava de Alta (Bull Call Spread)</option>
+                                <option value="bear_put_spread">Trava de Baixa (Bear Put Spread)</option>
+                                <option value="straddle">Straddle</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label>Preço do Ativo</label>
+                            <input type="number" id="strat-spot" value="30" step="0.01">
+                        </div>
+                        <div id="strat-fields">
+                            <div class="input-group">
+                                <label>Strike</label>
+                                <input type="number" id="strat-strike" value="32" step="0.01">
+                            </div>
+                            <div class="input-group">
+                                <label>Prêmio</label>
+                                <input type="number" id="strat-premium" value="1.50" step="0.01">
+                            </div>
+                        </div>
+                        <button class="btn btn-blue" onclick="analyzeStrategy()">Analisar</button>
+                    </div>
+                    <div id="strat-result" style="padding: 16px;">
+                        <div class="loading">Configure a estratégia e clique em Analisar</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Guia de Estratégias B3</h2>
+                <table>
+                    <thead>
+                        <tr><th>Estratégia</th><th>Cenário</th><th>Risco</th><th>Retorno</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Venda Coberta</td><td>Neutro/Alta moderada</td><td>Moderado</td><td>Limitado (prêmio)</td></tr>
+                        <tr><td>Put Protetiva</td><td>Alta com proteção</td><td>Baixo</td><td>Ilimitado</td></tr>
+                        <tr><td>Trava de Alta</td><td>Alta moderada</td><td>Limitado</td><td>Limitado</td></tr>
+                        <tr><td>Trava de Baixa</td><td>Baixa moderada</td><td>Limitado</td><td>Limitado</td></tr>
+                        <tr><td>Straddle</td><td>Alta volatilidade</td><td>Limitado (prêmio)</td><td>Ilimitado</td></tr>
+                        <tr><td>Iron Condor</td><td>Baixa volatilidade</td><td>Limitado</td><td>Limitado (prêmio)</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- PORTFOLIO TAB -->
+        <div id="tab-portfolio" class="tab-content">
+            <div class="grid grid-3" style="margin-bottom: 20px;">
+                <div class="card">
+                    <div class="stat">
+                        <div class="stat-label">Saldo Disponível</div>
+                        <div class="stat-value" id="port-cash">-</div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="stat">
+                        <div class="stat-label">Total Investido</div>
+                        <div class="stat-value" id="port-invested">-</div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="stat">
+                        <div class="stat-label">P&L Realizado</div>
+                        <div class="stat-value" id="port-pnl">-</div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="port-warnings"></div>
+
+            <div class="card" style="margin-bottom: 20px;">
+                <h2>Posições Abertas</h2>
+                <table>
+                    <thead>
+                        <tr><th>ID</th><th>Ticker</th><th>Tipo</th><th>Strike</th>
+                            <th>Venc.</th><th>Qtd</th><th>Preço Entrada</th><th>Ação</th></tr>
+                    </thead>
+                    <tbody id="port-positions"></tbody>
+                </table>
+            </div>
+
+            <div class="card">
+                <h2>Nova Operação (Paper Trading)</h2>
+                <div class="grid grid-3">
+                    <div class="input-group">
+                        <label>Ticker da Opção</label>
+                        <input type="text" id="trade-ticker" placeholder="Ex: PETRA32">
+                    </div>
+                    <div class="input-group">
+                        <label>Tipo</label>
+                        <select id="trade-type">
+                            <option value="call">Call</option>
+                            <option value="put">Put</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label>Strike</label>
+                        <input type="number" id="trade-strike" step="0.01">
+                    </div>
+                    <div class="input-group">
+                        <label>Vencimento</label>
+                        <input type="date" id="trade-exp">
+                    </div>
+                    <div class="input-group">
+                        <label>Quantidade</label>
+                        <input type="number" id="trade-qty" value="100" step="100">
+                    </div>
+                    <div class="input-group">
+                        <label>Preço</label>
+                        <input type="number" id="trade-price" step="0.01">
+                    </div>
+                </div>
+                <div style="display: flex; gap: 8px; margin-top: 12px;">
+                    <button class="btn" onclick="executeTrade('BUY')">Comprar</button>
+                    <button class="btn btn-red" onclick="executeTrade('SELL')">Vender</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentTicker = null;
+        let chainData = null;
+
+        function switchTab(name) {
+            document.querySelectorAll('.tab').forEach((t, i) => {
+                const tabs = ['dashboard', 'chain', 'greeks', 'strategies', 'portfolio'];
+                t.classList.toggle('active', tabs[i] === name);
+            });
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.getElementById('tab-' + name).classList.add('active');
+            if (name === 'portfolio') loadPortfolio();
+        }
+
+        function selectTicker(ticker) {
+            if (!ticker) return;
+            ticker = ticker.toUpperCase().trim();
+            currentTicker = ticker;
+            document.querySelectorAll('.ticker-btn').forEach(b => {
+                b.classList.toggle('active', b.textContent === ticker);
+            });
+            loadStockInfo(ticker);
+            loadSignals(ticker);
+            loadChain(ticker);
+        }
+
+        async function loadStockInfo(ticker) {
+            document.getElementById('stock-price').textContent = 'Carregando...';
+            try {
+                const res = await fetch('/api/stock/' + ticker);
+                const data = await res.json();
+                if (data.error) throw new Error(data.error);
+                document.getElementById('stock-price').textContent = 'R$ ' + data.price.toFixed(2);
+                const changeEl = document.getElementById('stock-change');
+                changeEl.textContent = data.change_1d.toFixed(2) + '%';
+                changeEl.className = 'stat-value ' + (data.change_1d >= 0 ? 'positive' : 'negative');
+                document.getElementById('stock-vol').textContent = data.volatility_30d.toFixed(1) + '%';
+            } catch (e) {
+                document.getElementById('stock-price').textContent = 'Erro';
+            }
+        }
+
+        async function loadSignals(ticker) {
+            const container = document.getElementById('signals-container');
+            container.innerHTML = '<div class="loading">Analisando sinais...</div>';
+            try {
+                const res = await fetch('/api/signals/' + ticker);
+                const data = await res.json();
+                if (!data.signals || data.signals.length === 0) {
+                    container.innerHTML = '<div class="loading">Nenhum sinal identificado no momento</div>';
+                    return;
+                }
+                container.innerHTML = data.signals.map(s => {
+                    const confClass = s.confidence >= 70 ? 'confidence-high' :
+                                     s.confidence >= 55 ? 'confidence-med' : 'confidence-low';
+                    return `<div class="signal-card">
+                        <div class="signal-type">${s.type}
+                            <span class="confidence ${confClass}" style="float:right">
+                                ${s.confidence.toFixed(0)}% confiança
+                            </span>
+                        </div>
+                        <div style="color: #8b949e; margin: 8px 0; font-size: 13px;">
+                            Direção: ${s.direction} | ${s.rationale}
+                        </div>
+                        <div style="font-size: 13px;">
+                            <strong>${s.strategy.strategy}</strong><br>
+                            Lucro Máx: R$ ${typeof s.strategy.max_profit === 'number' ? s.strategy.max_profit.toFixed(2) : s.strategy.max_profit} |
+                            Perda Máx: R$ ${typeof s.strategy.max_loss === 'number' ? s.strategy.max_loss.toFixed(2) : s.strategy.max_loss} |
+                            Breakeven: R$ ${s.strategy.breakeven ? s.strategy.breakeven.toFixed(2) : '-'}
+                        </div>
+                    </div>`;
+                }).join('');
+            } catch (e) {
+                container.innerHTML = '<div class="loading">Erro ao carregar sinais</div>';
+            }
+        }
+
+        async function loadChain(ticker) {
+            document.getElementById('chain-ticker').textContent = ticker;
+            document.getElementById('chain-body').innerHTML = '<tr><td colspan="11" class="loading">Carregando...</td></tr>';
+            try {
+                const res = await fetch('/api/chain/' + ticker);
+                chainData = await res.json();
+                const select = document.getElementById('chain-expiration');
+                select.innerHTML = '<option value="">Todos os vencimentos</option>' +
+                    chainData.expirations.map(e => `<option value="${e}">${e}</option>`).join('');
+                filterChain();
+            } catch (e) {
+                document.getElementById('chain-body').innerHTML = '<tr><td colspan="11">Erro ao carregar</td></tr>';
+            }
+        }
+
+        function filterChain() {
+            if (!chainData) return;
+            const exp = document.getElementById('chain-expiration').value;
+            const itmOnly = document.getElementById('chain-itm-only').checked;
+            let filtered = chainData.chain;
+            if (exp) filtered = filtered.filter(o => o.expiration === exp);
+            if (itmOnly) filtered = filtered.filter(o => o.itm);
+            filtered = filtered.slice(0, 100);
+
+            document.getElementById('chain-body').innerHTML = filtered.map(o => `
+                <tr>
+                    <td><strong>${o.ticker}</strong></td>
+                    <td><span class="tag ${o.type === 'call' ? 'tag-call' : 'tag-put'}">${o.type.toUpperCase()}</span></td>
+                    <td>R$ ${o.strike.toFixed(2)}</td>
+                    <td>R$ ${o.bid.toFixed(2)}</td>
+                    <td>R$ ${o.ask.toFixed(2)}</td>
+                    <td>R$ ${o.last.toFixed(2)}</td>
+                    <td>${o.iv.toFixed(1)}%</td>
+                    <td>${o.volume.toLocaleString()}</td>
+                    <td>${o.open_interest.toLocaleString()}</td>
+                    <td>${o.days_to_expiry}d</td>
+                    <td>
+                        <button class="ticker-btn" onclick="quickTrade('${o.ticker}','${o.type}',${o.strike},'${o.expiration}',${o.last})">
+                            Trade
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function quickTrade(ticker, type, strike, exp, price) {
+            switchTab('portfolio');
+            document.getElementById('trade-ticker').value = ticker;
+            document.getElementById('trade-type').value = type;
+            document.getElementById('trade-strike').value = strike;
+            document.getElementById('trade-exp').value = exp;
+            document.getElementById('trade-price').value = price;
+        }
+
+        async function calculateGreeks() {
+            try {
+                const res = await fetch('/api/greeks', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        spot: document.getElementById('greek-spot').value,
+                        strike: document.getElementById('greek-strike').value,
+                        days: document.getElementById('greek-days').value,
+                        volatility: document.getElementById('greek-vol').value,
+                        rate: document.getElementById('greek-rate').value / 100,
+                        type: document.getElementById('greek-type').value,
+                    })
+                });
+                const data = await res.json();
+                document.getElementById('g-price').textContent = 'R$ ' + data.price.toFixed(4);
+                document.getElementById('g-delta').textContent = data.delta.toFixed(4);
+                document.getElementById('g-gamma').textContent = data.gamma.toFixed(4);
+                document.getElementById('g-theta').textContent = data.theta.toFixed(4);
+                document.getElementById('g-vega').textContent = data.vega.toFixed(4);
+                document.getElementById('g-rho').textContent = data.rho.toFixed(4);
+                document.getElementById('g-iv').textContent = data.iv.toFixed(2) + '%';
+            } catch (e) {
+                alert('Erro ao calcular Greeks');
+            }
+        }
+
+        async function analyzeStrategy() {
+            const stratType = document.getElementById('strat-type').value;
+            const spot = parseFloat(document.getElementById('strat-spot').value);
+            let body = {strategy: stratType, spot: spot};
+
+            if (stratType === 'covered_call' || stratType === 'protective_put') {
+                body.strike = document.getElementById('strat-strike').value;
+                body.premium = document.getElementById('strat-premium').value;
+            } else if (stratType === 'bull_call_spread' || stratType === 'bear_put_spread') {
+                body.lower_strike = parseFloat(document.getElementById('strat-strike').value) - 2;
+                body.upper_strike = document.getElementById('strat-strike').value;
+                body.lower_premium = parseFloat(document.getElementById('strat-premium').value) + 0.5;
+                body.upper_premium = document.getElementById('strat-premium').value;
+            } else if (stratType === 'straddle') {
+                body.strike = document.getElementById('strat-strike').value;
+                body.call_premium = document.getElementById('strat-premium').value;
+                body.put_premium = document.getElementById('strat-premium').value;
+            }
+
+            try {
+                const res = await fetch('/api/strategy/analyze', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(body),
+                });
+                const data = await res.json();
+                document.getElementById('strat-result').innerHTML = `
+                    <h3 style="color: #58a6ff; margin-bottom: 12px;">${data.strategy}</h3>
+                    <p style="color: #8b949e; font-size: 13px; margin-bottom: 12px;">${data.description}</p>
+                    <div class="portfolio-stat"><span>Lucro Máximo</span><span class="positive">R$ ${typeof data.max_profit === 'number' ? data.max_profit.toFixed(2) : data.max_profit}</span></div>
+                    <div class="portfolio-stat"><span>Perda Máxima</span><span class="negative">R$ ${typeof data.max_loss === 'number' ? data.max_loss.toFixed(2) : data.max_loss}</span></div>
+                    <div class="portfolio-stat"><span>Breakeven</span><span>R$ ${data.breakeven ? data.breakeven.toFixed(2) : '-'}</span></div>
+                    <div class="portfolio-stat"><span>Risco</span><span>${data.risk_level}</span></div>
+                    ${data.risk_reward ? `<div class="portfolio-stat"><span>Risk/Reward</span><span>${data.risk_reward}x</span></div>` : ''}
+                    <div style="margin-top: 12px;">
+                        <strong style="font-size: 12px; color: #8b949e;">PERNAS DA OPERAÇÃO:</strong>
+                        ${data.legs.map(l => `<div style="padding: 4px 0; font-size: 13px;">
+                            <span class="tag ${l.action === 'BUY' ? 'tag-buy' : 'tag-sell'}">${l.action}</span>
+                            ${l.qty}x ${l.instrument} @ R$ ${l.strike || l.price}
+                            ${l.premium ? '(prêmio: R$ ' + l.premium + ')' : ''}
+                        </div>`).join('')}
+                    </div>
+                `;
+            } catch (e) {
+                document.getElementById('strat-result').innerHTML = '<div class="loading">Erro na análise</div>';
+            }
+        }
+
+        async function loadPortfolio() {
+            try {
+                const res = await fetch('/api/portfolio');
+                const data = await res.json();
+                const s = data.summary;
+                document.getElementById('port-cash').textContent = 'R$ ' + s.cash.toLocaleString('pt-BR', {minimumFractionDigits: 2});
+                document.getElementById('port-invested').textContent = 'R$ ' + s.total_invested.toLocaleString('pt-BR', {minimumFractionDigits: 2});
+                const pnlEl = document.getElementById('port-pnl');
+                pnlEl.textContent = 'R$ ' + s.realized_pnl.toLocaleString('pt-BR', {minimumFractionDigits: 2});
+                pnlEl.className = 'stat-value ' + (s.realized_pnl >= 0 ? 'positive' : 'negative');
+
+                document.getElementById('port-warnings').innerHTML = data.warnings.map(w =>
+                    `<div class="warning">⚠️ ${w.message}</div>`
+                ).join('');
+
+                document.getElementById('port-positions').innerHTML = s.positions.length === 0 ?
+                    '<tr><td colspan="8" style="text-align: center; color: #8b949e;">Nenhuma posição aberta</td></tr>' :
+                    s.positions.map(p => `
+                        <tr>
+                            <td>${p.id}</td>
+                            <td><strong>${p.ticker}</strong></td>
+                            <td><span class="tag ${p.type === 'call' ? 'tag-call' : 'tag-put'}">${p.type.toUpperCase()}</span></td>
+                            <td>R$ ${p.strike}</td>
+                            <td>${p.expiration}</td>
+                            <td>${p.qty}</td>
+                            <td>R$ ${p.entry_price}</td>
+                            <td><button class="btn btn-red" style="padding: 4px 12px; font-size: 12px;"
+                                onclick="closePosition(${p.id}, ${p.entry_price})">Fechar</button></td>
+                        </tr>
+                    `).join('');
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        async function executeTrade(action) {
+            const body = {
+                ticker: document.getElementById('trade-ticker').value,
+                type: document.getElementById('trade-type').value,
+                strike: document.getElementById('trade-strike').value,
+                expiration: document.getElementById('trade-exp').value,
+                qty: document.getElementById('trade-qty').value,
+                price: document.getElementById('trade-price').value,
+                action: action,
+            };
+            try {
+                const res = await fetch('/api/portfolio/trade', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(body),
+                });
+                const data = await res.json();
+                if (data.error) {
+                    alert('Erro: ' + data.error);
+                } else {
+                    alert(`${action} executado! Saldo: R$ ${data.remaining_cash.toFixed(2)}`);
+                    loadPortfolio();
+                }
+            } catch (e) {
+                alert('Erro ao executar trade');
+            }
+        }
+
+        async function closePosition(id, price) {
+            const closePrice = prompt('Preço de fechamento:', price);
+            if (!closePrice) return;
+            try {
+                const res = await fetch('/api/portfolio/close', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({position_id: id, price: parseFloat(closePrice)}),
+                });
+                const data = await res.json();
+                if (data.error) {
+                    alert('Erro: ' + data.error);
+                } else {
+                    alert(`Posição fechada! P&L: R$ ${data.pnl.toFixed(2)}`);
+                    loadPortfolio();
+                }
+            } catch (e) {
+                alert('Erro ao fechar posição');
+            }
+        }
+
+        // Clock
+        setInterval(() => {
+            const now = new Date();
+            document.getElementById('clock').textContent = now.toLocaleString('pt-BR');
+        }, 1000);
+    </script>
+</body>
+</html>
