@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flight Search Bot - Passagens Baratas</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            min-height: 100vh;
+            color: #e0e0e0;
+        }
+
+        header {
+            text-align: center;
+            padding: 2rem 1rem 1rem;
+        }
+
+        header h1 {
+            font-size: 2rem;
+            color: #fff;
+            letter-spacing: 1px;
+        }
+
+        header h1 span { color: #00d4ff; }
+
+        header p {
+            color: #aaa;
+            margin-top: 0.3rem;
+            font-size: 0.95rem;
+        }
+
+        .search-panel {
+            max-width: 900px;
+            margin: 1.5rem auto;
+            background: rgba(255,255,255,0.06);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 16px;
+            padding: 2rem;
+        }
+
+        .row {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+        }
+
+        .field {
+            flex: 1;
+            min-width: 200px;
+            position: relative;
+        }
+
+        .field label {
+            display: block;
+            font-size: 0.8rem;
+            color: #aaa;
+            margin-bottom: 0.3rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .field input, .field select {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 8px;
+            background: rgba(255,255,255,0.08);
+            color: #fff;
+            font-size: 1rem;
+            transition: border-color 0.2s;
+        }
+
+        .field input:focus, .field select:focus {
+            outline: none;
+            border-color: #00d4ff;
+        }
+
+        .field select option { background: #1e1e2f; color: #fff; }
+
+        .autocomplete-list {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: #1e1e2f;
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 8px;
+            margin-top: 4px;
+            max-height: 220px;
+            overflow-y: auto;
+            z-index: 100;
+            display: none;
+        }
+
+        .autocomplete-list.active { display: block; }
+
+        .autocomplete-item {
+            padding: 0.7rem 1rem;
+            cursor: pointer;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            transition: background 0.15s;
+        }
+
+        .autocomplete-item:hover { background: rgba(0,212,255,0.1); }
+
+        .autocomplete-item .ap-name {
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .autocomplete-item .ap-sub {
+            font-size: 0.8rem;
+            color: #888;
+        }
+
+        .btn-search {
+            width: 100%;
+            padding: 0.9rem;
+            background: linear-gradient(135deg, #00d4ff, #0090ff);
+            border: none;
+            border-radius: 10px;
+            color: #fff;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: opacity 0.2s, transform 0.1s;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-search:hover { opacity: 0.9; }
+        .btn-search:active { transform: scale(0.99); }
+        .btn-search:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .results-area {
+            max-width: 900px;
+            margin: 1.5rem auto 3rem;
+            padding: 0 1rem;
+        }
+
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .results-header h2 { font-size: 1.3rem; color: #fff; }
+        .results-header span { color: #aaa; font-size: 0.9rem; }
+
+        .spinner {
+            text-align: center;
+            padding: 3rem;
+            color: #aaa;
+            display: none;
+        }
+
+        .spinner.active { display: block; }
+
+        .spinner .dot {
+            display: inline-block;
+            width: 12px; height: 12px;
+            background: #00d4ff;
+            border-radius: 50%;
+            margin: 0 4px;
+            animation: bounce 1.2s infinite ease-in-out;
+        }
+
+        .spinner .dot:nth-child(2) { animation-delay: 0.2s; }
+        .spinner .dot:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+            40% { transform: scale(1); opacity: 1; }
+        }
+
+        .flight-card {
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 12px;
+            padding: 1.2rem 1.5rem;
+            margin-bottom: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 1.2rem;
+            transition: border-color 0.2s, transform 0.15s;
+        }
+
+        .flight-card:hover {
+            border-color: rgba(0,212,255,0.3);
+            transform: translateY(-1px);
+        }
+
+        .flight-airline {
+            min-width: 90px;
+            text-align: center;
+        }
+
+        .flight-airline img {
+            width: 36px; height: 36px;
+            border-radius: 6px;
+            background: #fff;
+            object-fit: contain;
+        }
+
+        .flight-airline .name {
+            font-size: 0.75rem;
+            color: #aaa;
+            margin-top: 0.3rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 90px;
+        }
+
+        .flight-times {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .flight-time {
+            text-align: center;
+        }
+
+        .flight-time .time {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .flight-time .code {
+            font-size: 0.75rem;
+            color: #888;
+        }
+
+        .flight-line {
+            flex: 1;
+            text-align: center;
+            position: relative;
+        }
+
+        .flight-line .duration {
+            font-size: 0.8rem;
+            color: #aaa;
+        }
+
+        .flight-line .line {
+            height: 2px;
+            background: linear-gradient(90deg, rgba(0,212,255,0.3), rgba(0,212,255,0.8), rgba(0,212,255,0.3));
+            margin: 4px 0;
+            border-radius: 2px;
+        }
+
+        .flight-line .stops {
+            font-size: 0.75rem;
+            color: #00d4ff;
+        }
+
+        .flight-line .stops.direct { color: #4caf50; }
+
+        .flight-price {
+            min-width: 120px;
+            text-align: right;
+        }
+
+        .flight-price .price {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #00d4ff;
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 3rem;
+            color: #888;
+        }
+
+        .error-msg {
+            text-align: center;
+            padding: 1.5rem;
+            background: rgba(255,60,60,0.1);
+            border: 1px solid rgba(255,60,60,0.2);
+            border-radius: 10px;
+            color: #ff6b6b;
+        }
+
+        @media (max-width: 600px) {
+            .flight-card { flex-direction: column; text-align: center; padding: 1rem; }
+            .flight-times { flex-direction: column; }
+            .flight-price { min-width: auto; text-align: center; }
+            .field { min-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>&#9992; <span>Flight Search</span> Bot</h1>
+        <p>Encontre as passagens mais baratas para o seu destino</p>
+    </header>
+
+    <div class="search-panel">
+        <div class="row">
+            <div class="field">
+                <label>Origem</label>
+                <input type="text" id="origin" placeholder="Ex: Sao Paulo" autocomplete="off">
+                <div class="autocomplete-list" id="origin-list"></div>
+            </div>
+            <div class="field">
+                <label>Destino</label>
+                <input type="text" id="destination" placeholder="Ex: Miami" autocomplete="off">
+                <div class="autocomplete-list" id="dest-list"></div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="field">
+                <label>Data de Ida</label>
+                <input type="date" id="dep-date">
+            </div>
+            <div class="field">
+                <label>Data de Volta (opcional)</label>
+                <input type="date" id="ret-date">
+            </div>
+        </div>
+        <div class="row">
+            <div class="field">
+                <label>Classe</label>
+                <select id="cabin">
+                    <option value="economy">Econ&ocirc;mica</option>
+                    <option value="premium_economy">Premium Economy</option>
+                    <option value="business">Executiva</option>
+                    <option value="first">Primeira Classe</option>
+                </select>
+            </div>
+            <div class="field">
+                <label>Ordenar por</label>
+                <select id="sort">
+                    <option value="price_low">Mais Barato</option>
+                    <option value="best">Melhor Oferta</option>
+                    <option value="fastest">Mais R&aacute;pido</option>
+                </select>
+            </div>
+        </div>
+        <button class="btn-search" id="btn-search" onclick="searchFlights()">Buscar Passagens</button>
+    </div>
+
+    <div class="results-area" id="results-area" style="display:none;">
+        <div class="results-header">
+            <h2>Resultados</h2>
+            <span id="results-count"></span>
+        </div>
+        <div id="results-list"></div>
+    </div>
+
+    <div class="spinner" id="spinner">
+        <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+        <p style="margin-top:1rem;">Buscando as melhores ofertas...</p>
+    </div>
+
+    <script>
+        // State for selected airports
+        const selected = {
+            origin: { skyId: '', entityId: '' },
+            dest: { skyId: '', entityId: '' },
+        };
+
+        let debounceTimer = null;
+
+        // Autocomplete setup
+        function setupAutocomplete(inputId, listId, target) {
+            const input = document.getElementById(inputId);
+            const list = document.getElementById(listId);
+
+            input.addEventListener('input', () => {
+                clearTimeout(debounceTimer);
+                const q = input.value.trim();
+                if (q.length < 2) { list.classList.remove('active'); return; }
+                debounceTimer = setTimeout(() => fetchAirports(q, list, target), 350);
+            });
+
+            input.addEventListener('blur', () => {
+                setTimeout(() => list.classList.remove('active'), 200);
+            });
+
+            input.addEventListener('focus', () => {
+                if (list.children.length > 0) list.classList.add('active');
+            });
+        }
+
+        async function fetchAirports(query, listEl, target) {
+            try {
+                const resp = await fetch(`/api/airports?q=${encodeURIComponent(query)}`);
+                const data = await resp.json();
+                if (data.error) { listEl.classList.remove('active'); return; }
+                listEl.innerHTML = '';
+                data.forEach(ap => {
+                    const div = document.createElement('div');
+                    div.className = 'autocomplete-item';
+                    div.innerHTML = `<div class="ap-name">${ap.name} (${ap.skyId})</div><div class="ap-sub">${ap.subtitle}</div>`;
+                    div.addEventListener('mousedown', (e) => {
+                        e.preventDefault();
+                        selected[target].skyId = ap.skyId;
+                        selected[target].entityId = ap.entityId;
+                        const inputId = target === 'origin' ? 'origin' : 'destination';
+                        document.getElementById(inputId).value = `${ap.name} (${ap.skyId})`;
+                        listEl.classList.remove('active');
+                    });
+                    listEl.appendChild(div);
+                });
+                if (data.length > 0) listEl.classList.add('active');
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        setupAutocomplete('origin', 'origin-list', 'origin');
+        setupAutocomplete('destination', 'dest-list', 'dest');
+
+        // Set min date to today
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('dep-date').min = today;
+        document.getElementById('ret-date').min = today;
+
+        async function searchFlights() {
+            const depDate = document.getElementById('dep-date').value;
+            const retDate = document.getElementById('ret-date').value;
+            const cabin = document.getElementById('cabin').value;
+            const sortBy = document.getElementById('sort').value;
+
+            if (!selected.origin.skyId) { alert('Selecione o aeroporto de origem da lista.'); return; }
+            if (!selected.dest.skyId) { alert('Selecione o aeroporto de destino da lista.'); return; }
+            if (!depDate) { alert('Informe a data de ida.'); return; }
+
+            const btn = document.getElementById('btn-search');
+            const spinner = document.getElementById('spinner');
+            const resultsArea = document.getElementById('results-area');
+
+            btn.disabled = true;
+            spinner.classList.add('active');
+            resultsArea.style.display = 'none';
+
+            const params = new URLSearchParams({
+                originSkyId: selected.origin.skyId,
+                originEntityId: selected.origin.entityId,
+                destSkyId: selected.dest.skyId,
+                destEntityId: selected.dest.entityId,
+                date: depDate,
+                cabin: cabin,
+                sortBy: sortBy,
+            });
+            if (retDate) params.set('returnDate', retDate);
+
+            try {
+                const resp = await fetch(`/api/flights?${params}`);
+                const data = await resp.json();
+
+                spinner.classList.remove('active');
+                btn.disabled = false;
+
+                const list = document.getElementById('results-list');
+                list.innerHTML = '';
+
+                if (data.error) {
+                    list.innerHTML = `<div class="error-msg">${data.error}</div>`;
+                    resultsArea.style.display = 'block';
+                    return;
+                }
+
+                const flights = data.flights || [];
+                document.getElementById('results-count').textContent = `${flights.length} voo(s) encontrado(s)`;
+
+                if (flights.length === 0) {
+                    list.innerHTML = '<div class="no-results">Nenhum voo encontrado para esta rota e data.</div>';
+                    resultsArea.style.display = 'block';
+                    return;
+                }
+
+                flights.forEach(f => {
+                    const depTime = formatTime(f.departure);
+                    const arrTime = formatTime(f.arrival);
+                    const depCode = f.origin.match(/\((\w+)\)/)?.[1] || '';
+                    const arrCode = f.destination.match(/\((\w+)\)/)?.[1] || '';
+                    const h = Math.floor(f.duration / 60);
+                    const m = f.duration % 60;
+                    const durStr = `${h}h${m.toString().padStart(2, '0')}m`;
+                    const stopsStr = f.stops === 0 ? 'Direto' : `${f.stops} parada(s)`;
+                    const stopsClass = f.stops === 0 ? 'stops direct' : 'stops';
+                    const logoHtml = f.logo
+                        ? `<img src="${f.logo}" alt="${f.airline}">`
+                        : `<div style="width:36px;height:36px;background:#333;border-radius:6px;"></div>`;
+
+                    const card = document.createElement('div');
+                    card.className = 'flight-card';
+                    card.innerHTML = `
+                        <div class="flight-airline">
+                            ${logoHtml}
+                            <div class="name">${f.airline}</div>
+                        </div>
+                        <div class="flight-times">
+                            <div class="flight-time">
+                                <div class="time">${depTime}</div>
+                                <div class="code">${depCode}</div>
+                            </div>
+                            <div class="flight-line">
+                                <div class="duration">${durStr}</div>
+                                <div class="line"></div>
+                                <div class="${stopsClass}">${stopsStr}</div>
+                            </div>
+                            <div class="flight-time">
+                                <div class="time">${arrTime}</div>
+                                <div class="code">${arrCode}</div>
+                            </div>
+                        </div>
+                        <div class="flight-price">
+                            <div class="price">${f.price}</div>
+                        </div>
+                    `;
+                    list.appendChild(card);
+                });
+
+                resultsArea.style.display = 'block';
+                resultsArea.scrollIntoView({ behavior: 'smooth' });
+            } catch (e) {
+                spinner.classList.remove('active');
+                btn.disabled = false;
+                document.getElementById('results-list').innerHTML = `<div class="error-msg">Erro de conexao: ${e.message}</div>`;
+                document.getElementById('results-area').style.display = 'block';
+            }
+        }
+
+        function formatTime(iso) {
+            if (!iso) return '--:--';
+            const d = new Date(iso);
+            return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        }
+    </script>
+</body>
+</html>
