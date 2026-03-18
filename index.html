@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TradeBot Pro - Plataforma de Trading Automatizado</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="css/chart.css">
+</head>
+<body>
+    <nav class="sidebar">
+        <div class="sidebar-header">
+            <h1 class="logo">TradeBot<span>Pro</span></h1>
+            <p class="logo-sub">Trading Automatizado</p>
+        </div>
+        <ul class="nav-menu">
+            <li class="nav-item active" data-section="dashboard">
+                <span class="nav-icon">&#9633;</span> Dashboard
+            </li>
+            <li class="nav-item" data-section="bot">
+                <span class="nav-icon">&#9881;</span> Bot Config
+            </li>
+            <li class="nav-item" data-section="orders">
+                <span class="nav-icon">&#9776;</span> Ordens
+            </li>
+            <li class="nav-item" data-section="history">
+                <span class="nav-icon">&#128202;</span> Histórico
+            </li>
+            <li class="nav-item" data-section="wallet">
+                <span class="nav-icon">&#128176;</span> Carteira
+            </li>
+        </ul>
+        <div class="bot-status-panel">
+            <h3>Status do Bot</h3>
+            <div class="bot-indicator" id="botIndicator">
+                <span class="dot offline"></span>
+                <span class="status-text">Desligado</span>
+            </div>
+            <button class="btn btn-start" id="btnToggleBot">Iniciar Bot</button>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        <!-- Dashboard Section -->
+        <section class="section active" id="section-dashboard">
+            <header class="section-header">
+                <h2>Dashboard</h2>
+                <div class="header-actions">
+                    <span class="clock" id="clock"></span>
+                    <span class="market-status" id="marketStatus">Mercado Fechado</span>
+                </div>
+            </header>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <p class="stat-label">Saldo Total</p>
+                    <p class="stat-value" id="totalBalance">R$ 100.000,00</p>
+                    <p class="stat-change positive" id="balanceChange">+0,00%</p>
+                </div>
+                <div class="stat-card">
+                    <p class="stat-label">Lucro Hoje</p>
+                    <p class="stat-value" id="todayProfit">R$ 0,00</p>
+                    <p class="stat-change" id="profitChange">0,00%</p>
+                </div>
+                <div class="stat-card">
+                    <p class="stat-label">Operações Hoje</p>
+                    <p class="stat-value" id="todayTrades">0</p>
+                    <p class="stat-change" id="winRate">Win Rate: --</p>
+                </div>
+                <div class="stat-card">
+                    <p class="stat-label">Posições Abertas</p>
+                    <p class="stat-value" id="openPositions">0</p>
+                    <p class="stat-change" id="exposure">Exposição: R$ 0</p>
+                </div>
+            </div>
+
+            <div class="dashboard-grid">
+                <div class="card chart-card">
+                    <div class="card-header">
+                        <h3>Gráfico de Preços</h3>
+                        <div class="chart-controls">
+                            <select id="chartAsset">
+                                <option value="PETR4">PETR4</option>
+                                <option value="VALE3">VALE3</option>
+                                <option value="ITUB4">ITUB4</option>
+                                <option value="BBDC4">BBDC4</option>
+                                <option value="USDBRL">USD/BRL</option>
+                                <option value="WINFUT">WIN (Futuro)</option>
+                                <option value="DOLFUT">DOL (Futuro)</option>
+                            </select>
+                            <select id="chartTimeframe">
+                                <option value="1m">1 min</option>
+                                <option value="5m" selected>5 min</option>
+                                <option value="15m">15 min</option>
+                                <option value="1h">1 hora</option>
+                                <option value="1d">Diário</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="priceChart"></canvas>
+                    </div>
+                    <div class="chart-indicators">
+                        <label><input type="checkbox" id="showSMA" checked> SMA(20)</label>
+                        <label><input type="checkbox" id="showEMA"> EMA(9)</label>
+                        <label><input type="checkbox" id="showBollinger"> Bollinger</label>
+                        <label><input type="checkbox" id="showVolume" checked> Volume</label>
+                    </div>
+                </div>
+
+                <div class="card market-card">
+                    <div class="card-header">
+                        <h3>Cotações em Tempo Real</h3>
+                    </div>
+                    <div class="market-list" id="marketList">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="dashboard-grid">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Posições Abertas</h3>
+                    </div>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Ativo</th>
+                                <th>Tipo</th>
+                                <th>Qtd</th>
+                                <th>Preço Entrada</th>
+                                <th>Preço Atual</th>
+                                <th>P&L</th>
+                                <th>Ação</th>
+                            </tr>
+                        </thead>
+                        <tbody id="positionsTable">
+                            <tr class="empty-row"><td colspan="7">Nenhuma posição aberta</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Log do Bot</h3>
+                    </div>
+                    <div class="bot-log" id="botLog">
+                        <div class="log-entry info">Sistema inicializado. Aguardando ativação do bot...</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Bot Config Section -->
+        <section class="section" id="section-bot">
+            <header class="section-header">
+                <h2>Configuração do Bot</h2>
+            </header>
+
+            <div class="config-grid">
+                <div class="card">
+                    <div class="card-header"><h3>Estratégia de Trading</h3></div>
+                    <div class="form-group">
+                        <label>Estratégia Principal</label>
+                        <select id="strategy">
+                            <option value="sma_crossover">Cruzamento de Médias (SMA)</option>
+                            <option value="rsi_reversal">Reversão por RSI</option>
+                            <option value="bollinger_breakout">Rompimento de Bollinger</option>
+                            <option value="macd_signal">Sinal MACD</option>
+                            <option value="scalping">Scalping (Momentum)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Ativos Monitorados</label>
+                        <div class="checkbox-group" id="watchedAssets">
+                            <label><input type="checkbox" value="PETR4" checked> PETR4</label>
+                            <label><input type="checkbox" value="VALE3" checked> VALE3</label>
+                            <label><input type="checkbox" value="ITUB4"> ITUB4</label>
+                            <label><input type="checkbox" value="BBDC4"> BBDC4</label>
+                            <label><input type="checkbox" value="USDBRL" checked> USD/BRL</label>
+                            <label><input type="checkbox" value="WINFUT"> WIN Futuro</label>
+                            <label><input type="checkbox" value="DOLFUT"> DOL Futuro</label>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Mercados</label>
+                        <div class="checkbox-group" id="markets">
+                            <label><input type="checkbox" value="acoes" checked> Ações</label>
+                            <label><input type="checkbox" value="opcoes"> Opções</label>
+                            <label><input type="checkbox" value="dolar" checked> Dólar</label>
+                            <label><input type="checkbox" value="futuros"> Futuros</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header"><h3>Gerenciamento de Risco</h3></div>
+                    <div class="form-group">
+                        <label>Capital por Operação (%)</label>
+                        <input type="number" id="capitalPerTrade" value="5" min="1" max="100">
+                    </div>
+                    <div class="form-group">
+                        <label>Stop Loss (%)</label>
+                        <input type="number" id="stopLoss" value="2" min="0.1" max="50" step="0.1">
+                    </div>
+                    <div class="form-group">
+                        <label>Take Profit (%)</label>
+                        <input type="number" id="takeProfit" value="4" min="0.1" max="100" step="0.1">
+                    </div>
+                    <div class="form-group">
+                        <label>Máximo de Operações por Dia</label>
+                        <input type="number" id="maxDailyTrades" value="10" min="1" max="100">
+                    </div>
+                    <div class="form-group">
+                        <label>Perda Máxima Diária (R$)</label>
+                        <input type="number" id="maxDailyLoss" value="2000" min="100" step="100">
+                    </div>
+                    <div class="form-group">
+                        <label>Trailing Stop</label>
+                        <select id="trailingStop">
+                            <option value="none">Desativado</option>
+                            <option value="fixed">Fixo (1%)</option>
+                            <option value="atr">Baseado em ATR</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header"><h3>Parâmetros Técnicos</h3></div>
+                    <div class="form-group">
+                        <label>Período SMA Curta</label>
+                        <input type="number" id="smaShort" value="9" min="2" max="50">
+                    </div>
+                    <div class="form-group">
+                        <label>Período SMA Longa</label>
+                        <input type="number" id="smaLong" value="21" min="5" max="200">
+                    </div>
+                    <div class="form-group">
+                        <label>Período RSI</label>
+                        <input type="number" id="rsiPeriod" value="14" min="2" max="50">
+                    </div>
+                    <div class="form-group">
+                        <label>RSI Sobrecomprado</label>
+                        <input type="number" id="rsiOverbought" value="70" min="50" max="95">
+                    </div>
+                    <div class="form-group">
+                        <label>RSI Sobrevendido</label>
+                        <input type="number" id="rsiOversold" value="30" min="5" max="50">
+                    </div>
+                    <div class="form-group">
+                        <button class="btn btn-primary" id="btnSaveConfig">Salvar Configurações</button>
+                        <button class="btn btn-secondary" id="btnResetConfig">Resetar Padrões</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Orders Section -->
+        <section class="section" id="section-orders">
+            <header class="section-header">
+                <h2>Ordens</h2>
+                <button class="btn btn-primary" id="btnNewOrder">Nova Ordem Manual</button>
+            </header>
+
+            <div class="card">
+                <div class="card-header"><h3>Ordens Pendentes</h3></div>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Ativo</th>
+                            <th>Tipo</th>
+                            <th>Lado</th>
+                            <th>Quantidade</th>
+                            <th>Preço</th>
+                            <th>Status</th>
+                            <th>Ação</th>
+                        </tr>
+                    </thead>
+                    <tbody id="pendingOrders">
+                        <tr class="empty-row"><td colspan="8">Nenhuma ordem pendente</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="card">
+                <div class="card-header"><h3>Ordens Executadas Hoje</h3></div>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Hora</th>
+                            <th>Ativo</th>
+                            <th>Lado</th>
+                            <th>Quantidade</th>
+                            <th>Preço</th>
+                            <th>Resultado</th>
+                        </tr>
+                    </thead>
+                    <tbody id="executedOrders">
+                        <tr class="empty-row"><td colspan="7">Nenhuma ordem executada hoje</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Manual Order Modal -->
+            <div class="modal" id="orderModal">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>Nova Ordem Manual</h3>
+                        <button class="modal-close" id="closeOrderModal">&times;</button>
+                    </div>
+                    <div class="form-group">
+                        <label>Ativo</label>
+                        <select id="orderAsset">
+                            <option value="PETR4">PETR4</option>
+                            <option value="VALE3">VALE3</option>
+                            <option value="ITUB4">ITUB4</option>
+                            <option value="BBDC4">BBDC4</option>
+                            <option value="USDBRL">USD/BRL</option>
+                            <option value="WINFUT">WIN Futuro</option>
+                            <option value="DOLFUT">DOL Futuro</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Lado</label>
+                        <select id="orderSide">
+                            <option value="buy">Compra</option>
+                            <option value="sell">Venda</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Tipo</label>
+                        <select id="orderType">
+                            <option value="market">A Mercado</option>
+                            <option value="limit">Limitada</option>
+                            <option value="stop">Stop</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Quantidade</label>
+                        <input type="number" id="orderQty" value="100" min="1">
+                    </div>
+                    <div class="form-group" id="orderPriceGroup">
+                        <label>Preço</label>
+                        <input type="number" id="orderPrice" step="0.01">
+                    </div>
+                    <button class="btn btn-primary" id="btnSubmitOrder">Enviar Ordem</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- History Section -->
+        <section class="section" id="section-history">
+            <header class="section-header">
+                <h2>Histórico de Operações</h2>
+                <div class="header-actions">
+                    <select id="historyPeriod">
+                        <option value="today">Hoje</option>
+                        <option value="week">Última Semana</option>
+                        <option value="month" selected>Último Mês</option>
+                        <option value="all">Todo Período</option>
+                    </select>
+                </div>
+            </header>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <p class="stat-label">Total de Operações</p>
+                    <p class="stat-value" id="histTotalTrades">0</p>
+                </div>
+                <div class="stat-card">
+                    <p class="stat-label">Lucro Total</p>
+                    <p class="stat-value" id="histTotalProfit">R$ 0,00</p>
+                </div>
+                <div class="stat-card">
+                    <p class="stat-label">Win Rate</p>
+                    <p class="stat-value" id="histWinRate">--</p>
+                </div>
+                <div class="stat-card">
+                    <p class="stat-label">Sharpe Ratio</p>
+                    <p class="stat-value" id="histSharpe">--</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header"><h3>Curva de Equity</h3></div>
+                <div class="chart-container">
+                    <canvas id="equityChart"></canvas>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header"><h3>Todas as Operações</h3></div>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Ativo</th>
+                            <th>Lado</th>
+                            <th>Entrada</th>
+                            <th>Saída</th>
+                            <th>Qtd</th>
+                            <th>P&L</th>
+                            <th>Estratégia</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyTable">
+                        <tr class="empty-row"><td colspan="8">Nenhuma operação registrada</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Wallet Section -->
+        <section class="section" id="section-wallet">
+            <header class="section-header">
+                <h2>Carteira</h2>
+            </header>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <p class="stat-label">Saldo Disponível</p>
+                    <p class="stat-value" id="availableBalance">R$ 100.000,00</p>
+                </div>
+                <div class="stat-card">
+                    <p class="stat-label">Em Posições</p>
+                    <p class="stat-value" id="inPositions">R$ 0,00</p>
+                </div>
+                <div class="stat-card">
+                    <p class="stat-label">Patrimônio Total</p>
+                    <p class="stat-value" id="totalEquity">R$ 100.000,00</p>
+                </div>
+                <div class="stat-card">
+                    <p class="stat-label">Retorno Total</p>
+                    <p class="stat-value" id="totalReturn">0,00%</p>
+                </div>
+            </div>
+
+            <div class="dashboard-grid">
+                <div class="card">
+                    <div class="card-header"><h3>Distribuição da Carteira</h3></div>
+                    <div class="chart-container">
+                        <canvas id="portfolioChart"></canvas>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header"><h3>Ativos em Carteira</h3></div>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Ativo</th>
+                                <th>Quantidade</th>
+                                <th>Preço Médio</th>
+                                <th>Valor Atual</th>
+                                <th>P&L</th>
+                            </tr>
+                        </thead>
+                        <tbody id="walletAssets">
+                            <tr class="empty-row"><td colspan="5">Nenhum ativo em carteira</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script src="js/market-data.js"></script>
+    <script src="js/indicators.js"></script>
+    <script src="js/chart.js"></script>
+    <script src="js/trading-bot.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
