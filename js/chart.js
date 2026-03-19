@@ -336,6 +336,127 @@ const ChartRenderer = {
         ctx.stroke();
     },
 
+    // Bar chart for per-trade P&L
+    renderTradePnlChart(canvasId, trades) {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) return;
+
+        const ctx = canvas.getContext('2d');
+        const parent = canvas.parentElement;
+        canvas.width = parent.clientWidth;
+        canvas.height = 280;
+
+        const { width, height } = canvas;
+        ctx.clearRect(0, 0, width, height);
+
+        if (!trades || trades.length === 0) {
+            ctx.fillStyle = '#9ca3af';
+            ctx.font = '14px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('Nenhum trade finalizado ainda', width / 2, height / 2);
+            return;
+        }
+
+        const padding = { top: 20, right: 60, bottom: 40, left: 10 };
+        const chartW = width - padding.left - padding.right;
+        const chartH = height - padding.top - padding.bottom;
+
+        const pnls = trades.map(t => t.pnl);
+        const maxPnl = Math.max(...pnls, 0);
+        const minPnl = Math.min(...pnls, 0);
+        const range = (maxPnl - minPnl) || 1;
+        const adjMax = maxPnl + range * 0.1;
+        const adjMin = minPnl - range * 0.1;
+        const adjRange = adjMax - adjMin;
+
+        const barWidth = Math.min(chartW / trades.length, 40);
+        const gap = Math.max(barWidth * 0.2, 1);
+        const barNet = barWidth - gap;
+        const totalBarsWidth = trades.length * barWidth;
+        const offsetX = padding.left + (chartW - totalBarsWidth) / 2;
+
+        // Zero line
+        const zeroY = padding.top + chartH - ((0 - adjMin) / adjRange) * chartH;
+
+        // Grid
+        ctx.strokeStyle = 'rgba(55, 65, 81, 0.3)';
+        ctx.lineWidth = 0.5;
+        const gridSteps = 5;
+        for (let i = 0; i <= gridSteps; i++) {
+            const y = padding.top + (chartH / gridSteps) * i;
+            ctx.beginPath();
+            ctx.moveTo(padding.left, y);
+            ctx.lineTo(width - padding.right, y);
+            ctx.stroke();
+
+            const val = adjMax - (adjRange / gridSteps) * i;
+            ctx.fillStyle = '#9ca3af';
+            ctx.font = '10px sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText('R$ ' + val.toFixed(0), width - padding.right + 5, y + 3);
+        }
+
+        // Zero line highlight
+        ctx.strokeStyle = 'rgba(156, 163, 175, 0.6)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(padding.left, zeroY);
+        ctx.lineTo(width - padding.right, zeroY);
+        ctx.stroke();
+
+        // Bars
+        for (let i = 0; i < trades.length; i++) {
+            const pnl = trades[i].pnl;
+            const x = offsetX + i * barWidth + gap / 2;
+            const barY = padding.top + chartH - ((pnl - adjMin) / adjRange) * chartH;
+
+            const isPositive = pnl >= 0;
+            ctx.fillStyle = isPositive ? 'rgba(16, 185, 129, 0.85)' : 'rgba(239, 68, 68, 0.85)';
+
+            if (isPositive) {
+                ctx.fillRect(x, barY, barNet, zeroY - barY);
+            } else {
+                ctx.fillRect(x, zeroY, barNet, barY - zeroY);
+            }
+
+            // Trade number label at bottom
+            if (trades.length <= 40) {
+                ctx.fillStyle = '#9ca3af';
+                ctx.font = '9px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(i + 1, x + barNet / 2, height - padding.bottom + 14);
+            }
+        }
+
+        // Cumulative P&L overlay line
+        if (trades.length > 1) {
+            let cumulative = 0;
+            const cumValues = trades.map(t => { cumulative += t.pnl; return cumulative; });
+            const cumMax = Math.max(...cumValues);
+            const cumMin = Math.min(...cumValues, 0);
+            const cumRange = (cumMax - cumMin) || 1;
+
+            ctx.strokeStyle = '#3b82f6';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([4, 3]);
+            ctx.beginPath();
+            for (let i = 0; i < cumValues.length; i++) {
+                const x = offsetX + i * barWidth + barNet / 2;
+                const y = padding.top + chartH - ((cumValues[i] - cumMin) / cumRange) * chartH * 0.9 - chartH * 0.05;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Label
+            ctx.fillStyle = '#3b82f6';
+            ctx.font = '10px sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText('Acumulado', offsetX + trades.length * barWidth + 5, padding.top + 12);
+        }
+    },
+
     // Pie chart for portfolio
     renderPortfolioChart(canvasId, holdings) {
         const canvas = document.getElementById(canvasId);

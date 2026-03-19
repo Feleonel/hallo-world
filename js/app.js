@@ -24,6 +24,7 @@
             document.getElementById('section-' + target).classList.add('active');
 
             if (target === 'history') updateHistoryView();
+            if (target === 'results') updateResultsView();
             if (target === 'wallet') updateWalletView();
         });
     });
@@ -355,6 +356,110 @@
         // Equity chart
         ChartRenderer.renderEquityChart('equityChart', TradingBot.equityHistory);
     }
+
+    // --- Results Section ---
+    function getFilteredTrades() {
+        let trades = TradingBot.tradeHistory.slice();
+        const filter = document.getElementById('resultsFilter').value;
+        const assetFilter = document.getElementById('resultsAssetFilter').value;
+
+        if (filter === 'wins') trades = trades.filter(t => t.pnl > 0);
+        if (filter === 'losses') trades = trades.filter(t => t.pnl < 0);
+        if (assetFilter !== 'all') trades = trades.filter(t => t.symbol === assetFilter);
+
+        return trades;
+    }
+
+    function updateResultsView() {
+        const trades = getFilteredTrades();
+        const allTrades = TradingBot.tradeHistory;
+
+        // Summary stats (use filtered for display)
+        const wins = trades.filter(t => t.pnl > 0);
+        const losses = trades.filter(t => t.pnl < 0);
+
+        document.getElementById('resTotalTrades').textContent = trades.length;
+        document.getElementById('resWinLoss').textContent = `${wins.length} ganhos / ${losses.length} perdas`;
+
+        const netProfit = trades.reduce((sum, t) => sum + t.pnl, 0);
+        document.getElementById('resNetProfit').textContent = (netProfit >= 0 ? '+' : '') + 'R$ ' + netProfit.toFixed(2);
+        document.getElementById('resNetProfit').style.color = netProfit >= 0 ? 'var(--green)' : 'var(--red)';
+
+        const grossProfit = wins.reduce((sum, t) => sum + t.pnl, 0);
+        const grossLoss = Math.abs(losses.reduce((sum, t) => sum + t.pnl, 0));
+        const profitFactor = grossLoss > 0 ? (grossProfit / grossLoss).toFixed(2) : (grossProfit > 0 ? '∞' : '--');
+        document.getElementById('resProfitFactor').textContent = 'Fator de Lucro: ' + profitFactor;
+
+        // Best / Worst trade
+        if (trades.length > 0) {
+            const best = trades.reduce((a, b) => a.pnl > b.pnl ? a : b);
+            const worst = trades.reduce((a, b) => a.pnl < b.pnl ? a : b);
+
+            document.getElementById('resBestTrade').textContent = '+R$ ' + best.pnl.toFixed(2);
+            document.getElementById('resBestTradeInfo').textContent = `${best.symbol} - ${best.strategy}`;
+            document.getElementById('resWorstTrade').textContent = (worst.pnl >= 0 ? '+' : '') + 'R$ ' + worst.pnl.toFixed(2);
+            document.getElementById('resWorstTradeInfo').textContent = `${worst.symbol} - ${worst.strategy}`;
+        } else {
+            document.getElementById('resBestTrade').textContent = '--';
+            document.getElementById('resBestTradeInfo').textContent = '--';
+            document.getElementById('resWorstTrade').textContent = '--';
+            document.getElementById('resWorstTradeInfo').textContent = '--';
+        }
+
+        // Average win / loss
+        document.getElementById('resAvgWin').textContent = wins.length > 0
+            ? '+R$ ' + (grossProfit / wins.length).toFixed(2) : '--';
+        document.getElementById('resAvgLoss').textContent = losses.length > 0
+            ? '-R$ ' + (grossLoss / losses.length).toFixed(2) : '--';
+
+        // Win/Loss streaks
+        let maxWin = 0, maxLoss = 0, curWin = 0, curLoss = 0;
+        for (const t of trades) {
+            if (t.pnl > 0) { curWin++; curLoss = 0; maxWin = Math.max(maxWin, curWin); }
+            else { curLoss++; curWin = 0; maxLoss = Math.max(maxLoss, curLoss); }
+        }
+        document.getElementById('resWinStreak').textContent = maxWin;
+        document.getElementById('resLossStreak').textContent = maxLoss;
+
+        // Bar chart
+        ChartRenderer.renderTradePnlChart('tradePnlChart', trades);
+
+        // Table
+        const tbody = document.getElementById('resultsTable');
+        if (trades.length === 0) {
+            tbody.innerHTML = '<tr class="empty-row"><td colspan="11">Nenhum trade finalizado ainda</td></tr>';
+        } else {
+            tbody.innerHTML = trades.slice().reverse().map((t, idx) => {
+                const num = trades.length - idx;
+                const pnlClass = t.pnl >= 0 ? 'pl-positive' : 'pl-negative';
+                const sideClass = t.side === 'buy' ? 'badge-buy' : 'badge-sell';
+                const sideLabel = t.side === 'buy' ? 'Compra' : 'Venda';
+                const pnlPct = ((t.exitPrice - t.entryPrice) / t.entryPrice * 100);
+                const pnlPctAdj = t.side === 'sell' ? -pnlPct : pnlPct;
+                const reasonClass = t.reason === 'Take Profit' ? 'badge-buy'
+                    : t.reason === 'Stop Loss' ? 'badge-sell' : 'badge-filled';
+
+                return `
+                    <tr>
+                        <td>${num}</td>
+                        <td>${t.date.toLocaleString('pt-BR')}</td>
+                        <td>${t.symbol}</td>
+                        <td><span class="badge ${sideClass}">${sideLabel}</span></td>
+                        <td>R$ ${t.entryPrice.toFixed(2)}</td>
+                        <td>R$ ${t.exitPrice.toFixed(2)}</td>
+                        <td>${t.qty}</td>
+                        <td class="${pnlClass}">${t.pnl >= 0 ? '+' : ''}R$ ${t.pnl.toFixed(2)}</td>
+                        <td class="${pnlClass}">${pnlPctAdj >= 0 ? '+' : ''}${pnlPctAdj.toFixed(2)}%</td>
+                        <td><span class="badge ${reasonClass}">${t.reason}</span></td>
+                        <td>${t.strategy}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+    }
+
+    document.getElementById('resultsFilter').addEventListener('change', updateResultsView);
+    document.getElementById('resultsAssetFilter').addEventListener('change', updateResultsView);
 
     // --- Wallet Section ---
     function updateWalletView() {

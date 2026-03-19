@@ -27,6 +27,9 @@
             <li class="nav-item" data-section="history">
                 <span class="nav-icon">&#128202;</span> Histórico
             </li>
+            <li class="nav-item" data-section="results">
+                <span class="nav-icon">&#128200;</span> Resultados
+            </li>
             <li class="nav-item" data-section="wallet">
                 <span class="nav-icon">&#128176;</span> Carteira
             </li>
@@ -409,6 +412,103 @@
                     </thead>
                     <tbody id="historyTable">
                         <tr class="empty-row"><td colspan="8">Nenhuma operação registrada</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Results Section -->
+        <section class="section" id="section-results">
+            <header class="section-header">
+                <h2>Resultados por Trade</h2>
+                <div class="header-actions">
+                    <select id="resultsFilter">
+                        <option value="all">Todos</option>
+                        <option value="wins">Somente Ganhos</option>
+                        <option value="losses">Somente Perdas</option>
+                    </select>
+                    <select id="resultsAssetFilter">
+                        <option value="all">Todos os Ativos</option>
+                        <option value="PETR4">PETR4</option>
+                        <option value="VALE3">VALE3</option>
+                        <option value="ITUB4">ITUB4</option>
+                        <option value="BBDC4">BBDC4</option>
+                        <option value="USDBRL">USD/BRL</option>
+                        <option value="WINFUT">WIN</option>
+                        <option value="DOLFUT">DOL</option>
+                    </select>
+                </div>
+            </header>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <p class="stat-label">Total de Trades</p>
+                    <p class="stat-value" id="resTotalTrades">0</p>
+                    <p class="stat-change" id="resWinLoss">0 ganhos / 0 perdas</p>
+                </div>
+                <div class="stat-card">
+                    <p class="stat-label">Resultado Líquido</p>
+                    <p class="stat-value" id="resNetProfit">R$ 0,00</p>
+                    <p class="stat-change" id="resProfitFactor">Fator de Lucro: --</p>
+                </div>
+                <div class="stat-card">
+                    <p class="stat-label">Melhor Trade</p>
+                    <p class="stat-value pl-positive" id="resBestTrade">--</p>
+                    <p class="stat-change" id="resBestTradeInfo">--</p>
+                </div>
+                <div class="stat-card">
+                    <p class="stat-label">Pior Trade</p>
+                    <p class="stat-value pl-negative" id="resWorstTrade">--</p>
+                    <p class="stat-change" id="resWorstTradeInfo">--</p>
+                </div>
+            </div>
+
+            <div class="stats-grid" style="margin-top: 0;">
+                <div class="stat-card">
+                    <p class="stat-label">Ganho Médio</p>
+                    <p class="stat-value pl-positive" id="resAvgWin">--</p>
+                </div>
+                <div class="stat-card">
+                    <p class="stat-label">Perda Média</p>
+                    <p class="stat-value pl-negative" id="resAvgLoss">--</p>
+                </div>
+                <div class="stat-card">
+                    <p class="stat-label">Maior Sequência de Ganhos</p>
+                    <p class="stat-value" id="resWinStreak">0</p>
+                </div>
+                <div class="stat-card">
+                    <p class="stat-label">Maior Sequência de Perdas</p>
+                    <p class="stat-value" id="resLossStreak">0</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header"><h3>P&L por Trade</h3></div>
+                <div class="chart-container">
+                    <canvas id="tradePnlChart"></canvas>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header"><h3>Detalhamento dos Trades</h3></div>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Data/Hora</th>
+                            <th>Ativo</th>
+                            <th>Lado</th>
+                            <th>Entrada</th>
+                            <th>Saída</th>
+                            <th>Qtd</th>
+                            <th>P&L (R$)</th>
+                            <th>P&L (%)</th>
+                            <th>Motivo</th>
+                            <th>Estratégia</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultsTable">
+                        <tr class="empty-row"><td colspan="11">Nenhum trade finalizado ainda</td></tr>
                     </tbody>
                 </table>
             </div>
